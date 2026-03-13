@@ -192,7 +192,7 @@ Mandatory protections:
 
 Environment variables required:
 
-COHERE_API_KEY = YOUR COHERE API KEY
+COHERE_API_KEY
 DATABASE_URL
 BETTER_AUTH_SECRET
 
