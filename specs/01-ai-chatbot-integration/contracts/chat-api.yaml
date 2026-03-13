@@ -1,0 +1,728 @@
+# OpenAPI Specification: Chatbot API
+
+**Version**: 1.0.0
+**Date**: 2026-02-17
+**Feature**: AI Chatbot Integration
+
+---
+
+## Overview
+
+This document defines the REST API contract for the AI chatbot integration. The API provides endpoints for sending messages to the chatbot and managing conversations.
+
+---
+
+## Server
+
+**Production**: `https://api.example.com`
+**Development**: `http://localhost:8000`
+
+**Base Path**: `/api`
+
+---
+
+## Authentication
+
+All endpoints require JWT Bearer token authentication.
+
+**Security Scheme**:
+```yaml
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token issued by Better Auth
+```
+
+**Usage**:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+---
+
+## Endpoints
+
+### POST /api/chatbot/message
+
+Send a message to the AI chatbot and receive a response.
+
+**Operation ID**: `sendMessage`
+**Tags**: [`Chatbot`]
+
+**Request**:
+```yaml
+post:
+  summary: Send a message to the chatbot
+  description: |
+    Send a natural language message to the AI chatbot. The chatbot will:
+    1. Process the message using Cohere LLM
+    2. Execute MCP tools if needed (add_task, list_tasks, etc.)
+    3. Return a conversational response
+    
+    The chatbot can:
+    - Create new tasks
+    - List existing tasks
+    - Mark tasks as complete
+    - Delete tasks
+    - Update task details
+    - Answer questions about tasks
+    
+  operationId: sendMessage
+  tags:
+    - Chatbot
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: X-Project-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Optional project identifier for multi-project setups
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/ChatRequest'
+        examples:
+          createTask:
+            summary: Create a new task
+            value:
+              message: "Add a task to buy groceries tomorrow"
+              conversation_id: null
+          listTasks:
+            summary: List all tasks
+            value:
+              message: "Show me my tasks"
+              conversation_id: 123
+          completeTask:
+            summary: Complete a task
+            value:
+              message: "Mark task 5 as done"
+              conversation_id: 123
+  responses:
+    200:
+      description: Successful response from chatbot
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ChatResponse'
+          examples:
+            simpleResponse:
+              summary: Simple text response
+              value:
+                reply: "I've created a new task: 'Buy groceries' for tomorrow."
+                conversation_id: 456
+                tool_calls: []
+            withToolCall:
+              summary: Response with tool execution
+              value:
+                reply: "I've added the task 'Buy groceries' to your list."
+                conversation_id: 456
+                tool_calls:
+                  - tool: add_task
+                    parameters:
+                      title: "Buy groceries"
+                      due_date: "2026-02-18"
+                    result:
+                      id: 123
+                      status: success
+    400:
+      description: Bad request (invalid input)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: invalid_request
+              message: "Message is required"
+    401:
+      description: Unauthorized (invalid or missing JWT)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: unauthorized
+              message: "Invalid or expired token"
+    403:
+      description: Forbidden (user isolation violation)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: forbidden
+              message: "You can only access your own conversations"
+    404:
+      description: Not found (conversation not found)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: conversation_not_found
+              message: "Conversation with ID 999 does not exist"
+    429:
+      description: Too many requests (rate limited)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: rate_limited
+              message: "Too many requests. Please try again in 60 seconds."
+    500:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: internal_error
+              message: "An unexpected error occurred"
+    503:
+      description: Service unavailable (Cohere API down)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: service_unavailable
+              message: "AI service is temporarily unavailable. Please try again later."
+```
+
+### GET /api/chatbot/conversations
+
+List all conversations for the authenticated user.
+
+**Operation ID**: `listConversations`
+**Tags**: [`Conversations`]
+
+**Request**:
+```yaml
+get:
+  summary: List user conversations
+  description: |
+    Retrieve a paginated list of conversations for the authenticated user.
+    Conversations are ordered by created_at descending (newest first).
+  operationId: listConversations
+  tags:
+    - Conversations
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      description: Number of conversations to return
+    - name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+      description: Pagination offset
+  responses:
+    200:
+      description: List of conversations
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              conversations:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+              total:
+                type: integer
+                description: Total number of conversations
+              limit:
+                type: integer
+              offset:
+                type: integer
+          example:
+            conversations:
+              - id: 456
+                title: "Task Planning"
+                created_at: "2026-02-17T10:30:00Z"
+                updated_at: "2026-02-17T11:45:00Z"
+                message_count: 15
+              - id: 123
+                title: "Quick Tasks"
+                created_at: "2026-02-16T09:00:00Z"
+                updated_at: "2026-02-16T09:30:00Z"
+                message_count: 8
+            total: 2
+            limit: 20
+            offset: 0
+```
+
+### GET /api/chatbot/conversations/{conversation_id}
+
+Get a specific conversation with its messages.
+
+**Operation ID**: `getConversation`
+**Tags**: [`Conversations`]
+
+**Request**:
+```yaml
+get:
+  summary: Get conversation with messages
+  description: |
+    Retrieve a specific conversation and its messages.
+    User isolation is enforced - users can only access their own conversations.
+  operationId: getConversation
+  tags:
+    - Conversations
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: conversation_id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Conversation ID
+    - name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 200
+      description: Number of messages to return (most recent)
+  responses:
+    200:
+      description: Conversation with messages
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ConversationWithMessages'
+          example:
+            conversation:
+              id: 123
+              user_id: "user-uuid-123"
+              title: "Task Planning"
+              created_at: "2026-02-17T10:30:00Z"
+              updated_at: "2026-02-17T11:45:00Z"
+            messages:
+              - id: 1
+                conversation_id: 123
+                user_id: "user-uuid-123"
+                role: "user"
+                content: "Help me plan my tasks for tomorrow"
+                created_at: "2026-02-17T10:30:00Z"
+                tool_calls: null
+              - id: 2
+                conversation_id: 123
+                user_id: "user-uuid-123"
+                role: "assistant"
+                content: "I'd be happy to help! What tasks do you need to accomplish?"
+                created_at: "2026-02-17T10:30:05Z"
+                tool_calls: null
+    403:
+      description: Forbidden (user doesn't own conversation)
+    404:
+      description: Conversation not found
+```
+
+### DELETE /api/chatbot/conversations/{conversation_id}
+
+Delete a conversation and all its messages.
+
+**Operation ID**: `deleteConversation`
+**Tags**: [`Conversations`]
+
+**Request**:
+```yaml
+delete:
+  summary: Delete a conversation
+  description: |
+    Delete a conversation and all associated messages.
+    This action is irreversible.
+  operationId: deleteConversation
+  tags:
+    - Conversations
+  security:
+    - bearerAuth: []
+  parameters:
+    - name: conversation_id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Conversation ID
+  responses:
+    204:
+      description: Conversation deleted successfully
+    403:
+      description: Forbidden (user doesn't own conversation)
+    404:
+      description: Conversation not found
+```
+
+---
+
+## Components
+
+### Schemas
+
+#### ChatRequest
+
+Request body for sending a message to the chatbot.
+
+```yaml
+components:
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The user's message to the chatbot
+          example: "Add a task to call the dentist at 3pm"
+        conversation_id:
+          type: integer
+          nullable: true
+          description: |
+            Existing conversation ID to continue a conversation.
+            If null or omitted, a new conversation is created.
+          example: 123
+        metadata:
+          type: object
+          nullable: true
+          description: Optional metadata (e.g., project_id, session_id)
+          properties:
+            project_id:
+              type: string
+              description: Project identifier for multi-project setups
+```
+
+#### ChatResponse
+
+Response from the chatbot after processing a message.
+
+```yaml
+    ChatResponse:
+      type: object
+      required:
+        - reply
+        - conversation_id
+      properties:
+        reply:
+          type: string
+          description: The chatbot's response message
+          example: "I've created a new task: 'Call the dentist' for 3pm today."
+        conversation_id:
+          type: integer
+          description: The conversation ID (new or existing)
+          example: 456
+        tool_calls:
+          type: array
+          description: List of MCP tools that were executed
+          items:
+            $ref: '#/components/schemas/ToolCall'
+        metadata:
+          type: object
+          description: Optional metadata about the response
+          properties:
+            processing_time_ms:
+              type: integer
+              description: Time taken to process the message
+            model:
+              type: string
+              description: LLM model used (e.g., "command-r-plus")
+```
+
+#### ToolCall
+
+Information about a tool executed by the chatbot.
+
+```yaml
+    ToolCall:
+      type: object
+      required:
+        - tool
+        - parameters
+        - result
+      properties:
+        tool:
+          type: string
+          description: Name of the MCP tool executed
+          enum:
+            - add_task
+            - list_tasks
+            - complete_task
+            - delete_task
+            - update_task
+          example: "add_task"
+        parameters:
+          type: object
+          description: Parameters passed to the tool
+          example:
+            title: "Buy groceries"
+            description: "Milk, eggs, bread"
+            due_date: "2026-02-18"
+        result:
+          type: object
+          description: Result from tool execution
+          properties:
+            status:
+              type: string
+              enum: [success, error]
+              example: "success"
+            data:
+              type: object
+              description: Tool-specific result data
+              example:
+                id: 123
+                title: "Buy groceries"
+                status: "pending"
+            error:
+              type: string
+              description: Error message if status is "error"
+```
+
+#### Conversation
+
+Summary of a conversation.
+
+```yaml
+    Conversation:
+      type: object
+      required:
+        - id
+        - title
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Conversation ID
+          example: 123
+        title:
+          type: string
+          description: Conversation title (auto-generated or user-provided)
+          example: "Task Planning"
+        created_at:
+          type: string
+          format: date-time
+          description: When the conversation was created
+          example: "2026-02-17T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last activity timestamp
+          example: "2026-02-17T11:45:00Z"
+        message_count:
+          type: integer
+          description: Number of messages in the conversation
+          example: 15
+```
+
+#### ConversationWithMessages
+
+Full conversation with message history.
+
+```yaml
+    ConversationWithMessages:
+      type: object
+      required:
+        - conversation
+        - messages
+      properties:
+        conversation:
+          $ref: '#/components/schemas/Conversation'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+```
+
+#### Message
+
+Individual message in a conversation.
+
+```yaml
+    Message:
+      type: object
+      required:
+        - id
+        - conversation_id
+        - user_id
+        - role
+        - content
+        - created_at
+      properties:
+        id:
+          type: integer
+          description: Message ID
+          example: 1
+        conversation_id:
+          type: integer
+          description: Parent conversation ID
+          example: 123
+        user_id:
+          type: string
+          description: User ID (JWT subject)
+          example: "user-uuid-123"
+        role:
+          type: string
+          enum: [user, assistant]
+          description: Message sender
+          example: "user"
+        content:
+          type: string
+          description: Message content
+          example: "Show me my tasks"
+        created_at:
+          type: string
+          format: date-time
+          description: When the message was created
+          example: "2026-02-17T10:30:00Z"
+        tool_calls:
+          type: object
+          nullable: true
+          description: Tool call data if assistant executed tools
+          properties:
+            calls:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolCall'
+```
+
+#### Error
+
+Standard error response format.
+
+```yaml
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code
+              example: "invalid_request"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Message is required"
+            details:
+              type: object
+              nullable: true
+              description: Additional error details (only in development)
+```
+
+---
+
+## Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `invalid_request` | 400 | Request body is malformed or missing required fields |
+| `unauthorized` | 401 | JWT token is missing, invalid, or expired |
+| `forbidden` | 403 | User attempted to access another user's resource |
+| `conversation_not_found` | 404 | Specified conversation does not exist |
+| `rate_limited` | 429 | Too many requests, retry after specified time |
+| `internal_error` | 500 | Unexpected server error |
+| `service_unavailable` | 503 | Cohere API or other external service is down |
+
+---
+
+## Rate Limiting
+
+**Default Limits**:
+- 60 requests per minute per user
+- 1000 requests per hour per user
+
+**Headers**:
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1645123456
+```
+
+**Response on Rate Limit**:
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Too many requests. Please try again in 60 seconds.",
+    "details": {
+      "retry_after": 60
+    }
+  }
+}
+```
+
+---
+
+## Versioning
+
+API version is included in the path: `/api/v1/chatbot/...`
+
+Current version: `v1` (implicit, no version prefix in initial release)
+
+Future versions: `/api/v2/chatbot/...`
+
+---
+
+## Testing
+
+**Test Environment**: `http://localhost:8000`
+
+**Test Authentication**:
+```bash
+# Get a test JWT token (development only)
+curl -X POST http://localhost:8000/api/auth/test-token \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "test-user-123"}'
+
+# Use token in chat requests
+curl -X POST http://localhost:8000/api/chatbot/message \
+  -H "Authorization: Bearer <TEST_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello"}'
+```
+
+---
+
+## Changelog
+
+### v1.0.0 (2026-02-17)
+- Initial release
+- POST /api/chatbot/message endpoint
+- GET /api/chatbot/conversations endpoint
+- GET /api/chatbot/conversations/{id} endpoint
+- DELETE /api/chatbot/conversations/{id} endpoint
+- JWT authentication
+- MCP tool integration

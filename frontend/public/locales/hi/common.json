@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "title": "कार्य बोर्ड",
+    "subtitle": "अपने कार्यों को कुशलता से प्रबंधित करें",
+    "logout": "साइन आउट",
+    "loggedinAs": "के रूप में लॉग इन",
+    "createTask": {
+      "title": "नया कार्य बनाएं",
+      "taskTitle": "कार्य शीर्षक *",
+      "placeholder": "कार्य शीर्षक दर्ज करें",
+      "priority": "प्राथमिकता",
+      "dueDate": "नियत तिथि",
+      "dueTime": "नियत समय",
+      "description": "विवरण (वैकल्पिक)",
+      "placeholderDesc": "कार्य विवरण दर्ज करें",
+      "addTask": "कार्य जोड़ें",
+      "addingTask": "कार्य जोड़ा जा रहा है...",
+      "lowPriority": "कम प्राथमिकता",
+      "mediumPriority": "मध्यम प्राथमिकता",
+      "highPriority": "उच्च प्राथमिकता"
+    },
+    "taskOverview": {
+      "title": "कार्य अवलोकन",
+      "totalTasks": "कुल कार्य",
+      "completed": "पूर्ण",
+      "pending": "लंबित",
+      "completionRate": "पूर्णता दर"
+    },
+    "quickActions": {
+      "showPending": "लंबित दिखाएं",
+      "showCompleted": "पूर्ण दिखाएं",
+      "showAll": "सभी दिखाएं"
+    },
+    "yourTasks": {
+      "title": "आपके कार्य",
+      "noTasks": "अभी तक कोई कार्य नहीं है। ऊपर अपना पहला कार्य बनाएं!",
+      "highPriority": "उच्च प्राथमिकता",
+      "mediumPriority": "मध्यम प्राथमिकता",
+      "lowPriority": "कम प्राथमिकता",
+      "due": "नियत:",
+      "created": "बनाया गया:",
+      "complete": "पूर्ण",
+      "undo": "पूर्ववत",
+      "delete": "हटाएं"
+    }
+  },
+  "signin": {
+    "title": "अपने खाते में साइन इन करें",
+    "emailPlaceholder": "ईमेल पता",
+    "passwordPlaceholder": "पासवर्ड",
+    "button": "साइन इन करें",
+    "loading": "साइन इन हो रहा है...",
+    "noAccount": "खाता नहीं है?",
+    "signupLink": "साइन अप करें"
+  },
+  "signup": {
+    "title": "एक नया खाता बनाएं",
+    "namePlaceholder": "पूरा नाम",
+    "emailPlaceholder": "ईमेल पता",
+    "passwordPlaceholder": "पासवर्ड",
+    "button": "साइन अप करें",
+    "loading": "खाता बन रहा है...",
+    "haveAccount": "पहले से खाता मौजूद है?",
+    "signinLink": "साइन इन करें",
+    "successMessage": "साइन अप सफल! पुनर्निर्देशित कर रहा है...",
+    "emailExists": "ईमेल पहले से पंजीकृत है। कृपया कोई अन्य ईमेल का उपयोग करें या साइन इन करने का प्रयास करें।",
+    "failure": "साइन अप विफल। कृपया पुनः प्रयास करें।",
+    "networkError": "नेटवर्क त्रुटि हुई"
+  }
+}

@@ -1,0 +1,122 @@
+// src/lib/better-auth-adapter.ts
+// Custom adapter to connect Better Auth with existing Python backend
+
+import { Adapter, User, Session, Account, Verification } from 'better-auth/types';
+
+interface PythonBackendResponse {
+  status: 'success' | 'error';
+  data?: any;
+  message?: string;
+}
+
+class PythonBackendAdapter implements Adapter {
+  async createUser(user: Omit<User, 'id'>): Promise<User> {
+    // Call your Python backend to create user
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: user.email,
+        password: user.password,
+        name: user.name,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create user');
+    }
+
+    const result: PythonBackendResponse = await response.json();
+    
+    if (result.status !== 'success') {
+      throw new Error(result.message || 'Failed to create user');
+    }
+
+    return {
+      id: result.data?.user?.id || '',
+      email: user.email,
+      name: user.name,
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...result.data?.user,
+    };
+  }
+
+  async findUserByEmail(email: string): Promise<{ user: User } | null> {
+    // This would need to be implemented based on your backend API
+    // For now, returning null to let Better Auth handle it
+    return null;
+  }
+
+  async findUserById(id: string): Promise<{ user: User } | null> {
+    // This would need to be implemented based on your backend API
+    return null;
+  }
+
+  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    // Implementation for updating user
+    return {} as User;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // Implementation for deleting user
+  }
+
+  async createSession(session: Omit<Session, 'id'>): Promise<Session> {
+    // Implementation for creating session
+    return {} as Session;
+  }
+
+  async findSessionById(id: string): Promise<{ session: Session } | null> {
+    // Implementation for finding session
+    return null;
+  }
+
+  async updateSession(sessionId: string, data: Partial<Session>): Promise<Session> {
+    // Implementation for updating session
+    return {} as Session;
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    // Implementation for deleting session
+  }
+
+  async createAccount(account: Omit<Account, 'id'>): Promise<Account> {
+    // Implementation for creating account
+    return {} as Account;
+  }
+
+  async findAccountByUserId(userId: string): Promise<Account[]> {
+    // Implementation for finding accounts by user ID
+    return [];
+  }
+
+  async findAccountById(id: string): Promise<Account | null> {
+    // Implementation for finding account by ID
+    return null;
+  }
+
+  async deleteAccount(id: string): Promise<void> {
+    // Implementation for deleting account
+  }
+
+  async createVerification(verification: Omit<Verification, 'id'>): Promise<Verification> {
+    // Implementation for creating verification
+    return {} as Verification;
+  }
+
+  async findVerification(identifier: string, type: string): Promise<Verification | null> {
+    // Implementation for finding verification
+    return null;
+  }
+
+  async deleteVerification(identifier: string, type: string): Promise<Verification | null> {
+    // Implementation for deleting verification
+    return null;
+  }
+}
+
+export default PythonBackendAdapter;

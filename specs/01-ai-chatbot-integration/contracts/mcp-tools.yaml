@@ -1,0 +1,768 @@
+# MCP Tool Contracts: AI Chatbot Integration
+
+**Version**: 1.0.0
+**Date**: 2026-02-17
+**Feature**: AI Chatbot Integration
+
+---
+
+## Overview
+
+This document defines the Model Context Protocol (MCP) tool contracts for the AI chatbot. Each tool corresponds to a task management operation that the AI agent can invoke.
+
+**Constitution Compliance**: All tools enforce strict user isolation (Constitution Principle III) and never allow direct database access from the AI agent (Constitution Principle IV).
+
+---
+
+## Tool Interface Standard
+
+Each MCP tool follows this interface:
+
+```python
+@mcp.tool()
+async def tool_name(user_id: str, **parameters) -> ToolResponse:
+    """Tool description."""
+    # 1. Validate user_id from JWT (never from request body)
+    # 2. Perform operation with user_id filter
+    # 3. Return structured response
+```
+
+**Response Format**:
+```json
+{
+  "status": "success" | "error",
+  "data": { ... },  // Present on success
+  "error": "..."    // Present on error
+}
+```
+
+---
+
+## Tool Definitions
+
+### 1. add_task
+
+Add a new task for the authenticated user.
+
+**Purpose**: Create a new task in the user's todo list.
+
+**Signature**:
+```python
+@mcp.tool()
+async def add_task(
+    user_id: str,
+    title: str,
+    description: str = "",
+    due_date: datetime = None
+) -> dict:
+    """
+    Add a new task for the authenticated user.
+    
+    Args:
+        user_id: JWT-authenticated user identifier (never from request)
+        title: Task title (required, 1-200 characters)
+        description: Optional task description (max 1000 characters)
+        due_date: Optional due date (ISO 8601 format)
+    
+    Returns:
+        Created task with id, title, status, due_date
+    """
+```
+
+**Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes (from JWT) | Authenticated user identifier |
+| title | string | Yes | Task title (1-200 chars) |
+| description | string | No | Task description (max 1000 chars) |
+| due_date | datetime | No | Due date in ISO 8601 format |
+
+**Response (Success)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 123,
+    "user_id": "user-uuid-123",
+    "title": "Buy groceries",
+    "description": "Milk, eggs, bread",
+    "status": "pending",
+    "due_date": "2026-02-18T00:00:00Z",
+    "created_at": "2026-02-17T10:30:00Z",
+    "updated_at": "2026-02-17T10:30:00Z"
+  }
+}
+```
+
+**Response (Error)**:
+```json
+{
+  "status": "error",
+  "error": "Title is required and must be between 1 and 200 characters"
+}
+```
+
+**Implementation**:
+```python
+@mcp.tool()
+async def add_task(
+    user_id: str,
+    title: str,
+    description: str = "",
+    due_date: datetime = None
+) -> dict:
+    """Add a new task for the authenticated user."""
+    try:
+        # Validate input
+        if not title or len(title) > 200:
+            return {
+                "status": "error",
+                "error": "Title is required and must be between 1 and 200 characters"
+            }
+        
+        if description and len(description) > 1000:
+            return {
+                "status": "error",
+                "error": "Description must be less than 1000 characters"
+            }
+        
+        # Create task with user_id (enforces isolation)
+        task = Task(
+            user_id=user_id,
+            title=title,
+            description=description,
+            due_date=due_date,
+            status="pending"
+        )
+        
+        session.add(task)
+        await session.commit()
+        await session.refresh(task)
+        
+        return {
+            "status": "success",
+            "data": {
+                "id": task.id,
+                "user_id": task.user_id,
+                "title": task.title,
+                "description": task.description,
+                "status": task.status,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "created_at": task.created_at.isoformat(),
+                "updated_at": task.updated_at.isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error adding task: {e}")
+        return {
+            "status": "error",
+            "error": "Failed to add task. Please try again."
+        }
+```
+
+**Example AI Usage**:
+```
+User: "Add a task to call the dentist tomorrow at 3pm"
+Agent → MCP: add_task(
+  user_id="user-uuid-123",
+  title="Call the dentist",
+  description="",
+  due_date="2026-02-18T15:00:00Z"
+)
+MCP → Agent: {status: "success", data: {id: 123, ...}}
+Agent → User: "I've added 'Call the dentist' for tomorrow at 3pm."
+```
+
+---
+
+### 2. list_tasks
+
+List tasks for the authenticated user with optional filtering.
+
+**Purpose**: Retrieve the user's tasks with various filters.
+
+**Signature**:
+```python
+@mcp.tool()
+async def list_tasks(
+    user_id: str,
+    status: str = "all",
+    limit: int = 50
+) -> dict:
+    """
+    List tasks for the authenticated user.
+    
+    Args:
+        user_id: JWT-authenticated user identifier
+        status: Filter by status: "all", "pending", "completed"
+        limit: Maximum number of tasks to return (1-100)
+    
+    Returns:
+        List of tasks with id, title, status, due_date
+    """
+```
+
+**Parameters**:
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| user_id | string | Yes (from JWT) | - | Authenticated user identifier |
+| status | string | No | "all" | Filter: "all", "pending", "completed" |
+| limit | integer | No | 50 | Max tasks to return (1-100) |
+
+**Response (Success)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "tasks": [
+      {
+        "id": 123,
+        "title": "Buy groceries",
+        "description": "Milk, eggs, bread",
+        "status": "pending",
+        "due_date": "2026-02-18T00:00:00Z",
+        "created_at": "2026-02-17T10:30:00Z"
+      },
+      {
+        "id": 122,
+        "title": "Call dentist",
+        "description": "",
+        "status": "completed",
+        "due_date": null,
+        "created_at": "2026-02-16T09:00:00Z"
+      }
+    ],
+    "total": 2,
+    "filtered_by": "all"
+  }
+}
+```
+
+**Response (Empty)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "tasks": [],
+    "total": 0,
+    "filtered_by": "all",
+    "message": "You don't have any tasks yet. Would you like to create one?"
+  }
+}
+```
+
+**Implementation**:
+```python
+@mcp.tool()
+async def list_tasks(
+    user_id: str,
+    status: str = "all",
+    limit: int = 50
+) -> dict:
+    """List tasks for the authenticated user."""
+    try:
+        # Validate limit
+        if limit < 1 or limit > 100:
+            limit = 50
+        
+        # Build query with user_id filter (enforces isolation)
+        query = select(Task).where(Task.user_id == user_id)
+        
+        # Apply status filter
+        if status == "pending":
+            query = query.where(Task.status == "pending")
+        elif status == "completed":
+            query = query.where(Task.status == "completed")
+        
+        # Order by created_at descending (newest first)
+        query = query.order_by(Task.created_at.desc()).limit(limit)
+        
+        tasks = await session.exec(query)
+        task_list = tasks.all()
+        
+        return {
+            "status": "success",
+            "data": {
+                "tasks": [
+                    {
+                        "id": task.id,
+                        "title": task.title,
+                        "description": task.description,
+                        "status": task.status,
+                        "due_date": task.due_date.isoformat() if task.due_date else None,
+                        "created_at": task.created_at.isoformat()
+                    }
+                    for task in task_list
+                ],
+                "total": len(task_list),
+                "filtered_by": status
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing tasks: {e}")
+        return {
+            "status": "error",
+            "error": "Failed to list tasks. Please try again."
+        }
+```
+
+**Example AI Usage**:
+```
+User: "Show me my pending tasks"
+Agent → MCP: list_tasks(user_id="user-uuid-123", status="pending", limit=50)
+MCP → Agent: {status: "success", data: {tasks: [...], total: 5}}
+Agent → User: "You have 5 pending tasks: 1. Buy groceries, 2. Call dentist, ..."
+```
+
+---
+
+### 3. complete_task
+
+Mark a task as completed.
+
+**Purpose**: Update a task's status to "completed".
+
+**Signature**:
+```python
+@mcp.tool()
+async def complete_task(
+    user_id: str,
+    task_id: int
+) -> dict:
+    """
+    Mark a task as completed.
+    
+    Args:
+        user_id: JWT-authenticated user identifier
+        task_id: ID of the task to complete
+    
+    Returns:
+        Updated task with new status
+    """
+```
+
+**Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes (from JWT) | Authenticated user identifier |
+| task_id | integer | Yes | ID of task to complete |
+
+**Response (Success)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 123,
+    "title": "Buy groceries",
+    "status": "completed",
+    "completed_at": "2026-02-17T10:30:00Z"
+  }
+}
+```
+
+**Response (Not Found)**:
+```json
+{
+  "status": "error",
+  "error": "Task not found. You don't have a task with ID 123."
+}
+```
+
+**Implementation**:
+```python
+@mcp.tool()
+async def complete_task(user_id: str, task_id: int) -> dict:
+    """Mark a task as completed."""
+    try:
+        # Find task with user_id filter (enforces isolation)
+        task = await session.get(Task, task_id)
+        
+        if not task:
+            return {
+                "status": "error",
+                "error": f"Task not found. You don't have a task with ID {task_id}."
+            }
+        
+        # Verify ownership
+        if task.user_id != user_id:
+            return {
+                "status": "error",
+                "error": "Access denied. You can only modify your own tasks."
+            }
+        
+        # Update status
+        task.status = "completed"
+        task.updated_at = datetime.utcnow()
+        
+        session.add(task)
+        await session.commit()
+        await session.refresh(task)
+        
+        return {
+            "status": "success",
+            "data": {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status,
+                "completed_at": task.updated_at.isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error completing task: {e}")
+        return {
+            "status": "error",
+            "error": "Failed to complete task. Please try again."
+        }
+```
+
+**Example AI Usage**:
+```
+User: "I finished buying groceries"
+Agent → MCP: complete_task(user_id="user-uuid-123", task_id=123)
+MCP → Agent: {status: "success", data: {id: 123, status: "completed"}}
+Agent → User: "Great job! I've marked 'Buy groceries' as completed."
+```
+
+---
+
+### 4. delete_task
+
+Delete a task.
+
+**Purpose**: Permanently remove a task from the user's todo list.
+
+**Signature**:
+```python
+@mcp.tool()
+async def delete_task(
+    user_id: str,
+    task_id: int
+) -> dict:
+    """
+    Delete a task.
+    
+    Args:
+        user_id: JWT-authenticated user identifier
+        task_id: ID of the task to delete
+    
+    Returns:
+        Confirmation of deletion
+    """
+```
+
+**Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes (from JWT) | Authenticated user identifier |
+| task_id | integer | Yes | ID of task to delete |
+
+**Response (Success)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 123,
+    "title": "Buy groceries",
+    "deleted": true
+  }
+}
+```
+
+**Response (Not Found)**:
+```json
+{
+  "status": "error",
+  "error": "Task not found. You don't have a task with ID 123."
+}
+```
+
+**Implementation**:
+```python
+@mcp.tool()
+async def delete_task(user_id: str, task_id: int) -> dict:
+    """Delete a task."""
+    try:
+        # Find task with user_id filter (enforces isolation)
+        task = await session.get(Task, task_id)
+        
+        if not task:
+            return {
+                "status": "error",
+                "error": f"Task not found. You don't have a task with ID {task_id}."
+            }
+        
+        # Verify ownership
+        if task.user_id != user_id:
+            return {
+                "status": "error",
+                "error": "Access denied. You can only delete your own tasks."
+            }
+        
+        # Delete task
+        await session.delete(task)
+        await session.commit()
+        
+        return {
+            "status": "success",
+            "data": {
+                "id": task_id,
+                "title": task.title,
+                "deleted": True
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deleting task: {e}")
+        return {
+            "status": "error",
+            "error": "Failed to delete task. Please try again."
+        }
+```
+
+**Example AI Usage**:
+```
+User: "Delete the grocery shopping task"
+Agent → MCP: delete_task(user_id="user-uuid-123", task_id=123)
+MCP → Agent: {status: "success", data: {id: 123, deleted: true}}
+Agent → User: "I've deleted the task 'Buy groceries'."
+```
+
+---
+
+### 5. update_task
+
+Update task details.
+
+**Purpose**: Modify an existing task's title, description, or due date.
+
+**Signature**:
+```python
+@mcp.tool()
+async def update_task(
+    user_id: str,
+    task_id: int,
+    title: str = None,
+    description: str = None,
+    due_date: datetime = None
+) -> dict:
+    """
+    Update task details.
+    
+    Args:
+        user_id: JWT-authenticated user identifier
+        task_id: ID of the task to update
+        title: New title (optional)
+        description: New description (optional)
+        due_date: New due date (optional)
+    
+    Returns:
+        Updated task
+    """
+```
+
+**Parameters**:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes (from JWT) | Authenticated user identifier |
+| task_id | integer | Yes | ID of task to update |
+| title | string | No | New title (1-200 chars) |
+| description | string | No | New description (max 1000 chars) |
+| due_date | datetime | No | New due date (ISO 8601) |
+
+**Response (Success)**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": 123,
+    "title": "Buy groceries and cook dinner",
+    "description": "Milk, eggs, bread, and ingredients for pasta",
+    "status": "pending",
+    "due_date": "2026-02-19T00:00:00Z",
+    "updated_at": "2026-02-17T10:30:00Z"
+  }
+}
+```
+
+**Response (Not Found)**:
+```json
+{
+  "status": "error",
+  "error": "Task not found. You don't have a task with ID 123."
+}
+```
+
+**Implementation**:
+```python
+@mcp.tool()
+async def update_task(
+    user_id: str,
+    task_id: int,
+    title: str = None,
+    description: str = None,
+    due_date: datetime = None
+) -> dict:
+    """Update task details."""
+    try:
+        # Find task with user_id filter (enforces isolation)
+        task = await session.get(Task, task_id)
+        
+        if not task:
+            return {
+                "status": "error",
+                "error": f"Task not found. You don't have a task with ID {task_id}."
+            }
+        
+        # Verify ownership
+        if task.user_id != user_id:
+            return {
+                "status": "error",
+                "error": "Access denied. You can only modify your own tasks."
+            }
+        
+        # Validate and update fields
+        if title is not None:
+            if not title or len(title) > 200:
+                return {
+                    "status": "error",
+                    "error": "Title must be between 1 and 200 characters"
+                }
+            task.title = title
+        
+        if description is not None:
+            if len(description) > 1000:
+                return {
+                    "status": "error",
+                    "error": "Description must be less than 1000 characters"
+                }
+            task.description = description
+        
+        if due_date is not None:
+            task.due_date = due_date
+        
+        task.updated_at = datetime.utcnow()
+        
+        session.add(task)
+        await session.commit()
+        await session.refresh(task)
+        
+        return {
+            "status": "success",
+            "data": {
+                "id": task.id,
+                "title": task.title,
+                "description": task.description,
+                "status": task.status,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "updated_at": task.updated_at.isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error updating task: {e}")
+        return {
+            "status": "error",
+            "error": "Failed to update task. Please try again."
+        }
+```
+
+**Example AI Usage**:
+```
+User: "Change the grocery task to include milk and eggs"
+Agent → MCP: update_task(
+  user_id="user-uuid-123",
+  task_id=123,
+  description="Milk, eggs, bread"
+)
+MCP → Agent: {status: "success", data: {...}}
+Agent → User: "I've updated the task to include milk, eggs, and bread."
+```
+
+---
+
+## Security Enforcement
+
+### User Isolation
+
+All tools enforce user isolation through these mechanisms:
+
+1. **JWT Extraction**: `user_id` is extracted from JWT token, never from request body
+2. **Database Filtering**: All queries include `WHERE user_id = :user_id`
+3. **Ownership Verification**: Before modifying/deleting, verify `task.user_id == user_id`
+4. **Error Messages**: Never reveal existence of other users' tasks
+
+### Input Validation
+
+All tools validate inputs:
+- String lengths (title: 1-200, description: 0-1000)
+- Date formats (ISO 8601)
+- Enum values (status: pending/completed)
+- Limit ranges (1-100)
+
+### Error Handling
+
+- Catch all exceptions
+- Return user-friendly error messages
+- Log full error details server-side
+- Never expose stack traces or internal errors
+
+---
+
+## Testing
+
+### Unit Tests
+
+```python
+async def test_add_task():
+    result = await add_task(
+        user_id="test-user-123",
+        title="Test task",
+        description="Test description"
+    )
+    assert result["status"] == "success"
+    assert result["data"]["title"] == "Test task"
+
+async def test_add_task_unauthorized():
+    # user_id from different user than task owner
+    result = await complete_task(
+        user_id="wrong-user-456",
+        task_id=123  # belongs to test-user-123
+    )
+    assert result["status"] == "error"
+    assert "Access denied" in result["error"]
+```
+
+### Integration Tests
+
+```python
+async def test_chatbot_add_task_flow():
+    # Simulate full AI agent flow
+    response = await client.post(
+        "/api/chatbot/message",
+        json={"message": "Add a task to buy groceries"},
+        headers={"Authorization": f"Bearer {test_jwt}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "task" in data["reply"].lower()
+    assert len(data["tool_calls"]) == 1
+    assert data["tool_calls"][0]["tool"] == "add_task"
+```
+
+---
+
+## Changelog
+
+### v1.0.0 (2026-02-17)
+- Initial release
+- add_task tool
+- list_tasks tool
+- complete_task tool
+- delete_task tool
+- update_task tool
+- User isolation enforcement
+- Input validation
+- Error handling

@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "title": "Todo Dashboard",
+    "subtitle": "Manage your tasks efficiently",
+    "logout": "Sign Out",
+    "loggedinAs": "Logged in as",
+    "createTask": {
+      "title": "Create New Task",
+      "taskTitle": "Task Title *",
+      "placeholder": "Enter task title",
+      "priority": "Priority",
+      "dueDate": "Due Date",
+      "dueTime": "Due Time",
+      "description": "Description (Optional)",
+      "placeholderDesc": "Enter task description",
+      "addTask": "Add Task",
+      "addingTask": "Adding Task...",
+      "lowPriority": "Low Priority",
+      "mediumPriority": "Medium Priority",
+      "highPriority": "High Priority"
+    },
+    "taskOverview": {
+      "title": "Task Overview",
+      "totalTasks": "Total Tasks",
+      "completed": "Completed",
+      "pending": "Pending",
+      "completionRate": "Completion Rate"
+    },
+    "quickActions": {
+      "showPending": "Show Pending",
+      "showCompleted": "Show Completed",
+      "showAll": "Show All"
+    },
+    "yourTasks": {
+      "title": "Your Tasks",
+      "noTasks": "No tasks yet. Create your first task above!",
+      "highPriority": "high priority",
+      "mediumPriority": "medium priority",
+      "lowPriority": "low priority",
+      "due": "Due:",
+      "created": "Created:",
+      "complete": "Complete",
+      "undo": "Undo",
+      "delete": "Delete"
+    }
+  },
+  "signin": {
+    "title": "Sign in to your account",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "button": "Sign in",
+    "loading": "Signing in...",
+    "noAccount": "Don't have an account?",
+    "signupLink": "Sign up"
+  },
+  "signup": {
+    "title": "Create a new account",
+    "namePlaceholder": "Full Name",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "button": "Sign up",
+    "loading": "Creating account...",
+    "haveAccount": "Already have an account?",
+    "signinLink": "Sign in",
+    "successMessage": "Sign up successful! Redirecting to sign in...",
+    "emailExists": "Email is already registered. Please use a different email or try signing in.",
+    "failure": "Sign up failed. Please try again.",
+    "networkError": "Network error occurred"
+  }
+}

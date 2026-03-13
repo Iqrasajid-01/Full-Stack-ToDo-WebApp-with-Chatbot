@@ -1,0 +1,70 @@
+{
+  "dashboard": {
+    "title": "کام کا بورڈ",
+    "subtitle": "اپنے کاموں کو موثر انداز میں منظم کریں",
+    "logout": "سائن آؤٹ",
+    "loggedinAs": "بطور لاگ ان",
+    "createTask": {
+      "title": "نیا کام بنائیں",
+      "taskTitle": "کام کا عنوان *",
+      "placeholder": "کام کا عنوان درج کریں",
+      "priority": "ترجیح",
+      "dueDate": "واجب الادا تاریخ",
+      "dueTime": "واجب الادا وقت",
+      "description": "تفصیل (اختیاری)",
+      "placeholderDesc": "کام کی تفصیل درج کریں",
+      "addTask": "کام شامل کریں",
+      "addingTask": "کام شامل ہو رہا ہے...",
+      "lowPriority": "کم ترجیح",
+      "mediumPriority": "درمیانہ ترجیح",
+      "highPriority": "زیادہ ترجیح"
+    },
+    "taskOverview": {
+      "title": "کام کا جائزہ",
+      "totalTasks": "کل کام",
+      "completed": "مکمل شدہ",
+      "pending": "زیر التوا",
+      "completionRate": "مکمل ہونے کی شرح"
+    },
+    "quickActions": {
+      "showPending": "زیر التوا دکھائیں",
+      "showCompleted": "مکمل شدہ دکھائیں",
+      "showAll": "تمام دکھائیں"
+    },
+    "yourTasks": {
+      "title": "آپ کے کام",
+      "noTasks": "ابھی تک کوئی کام نہیں ہے۔ اوپر اپنا پہلا کام بنائیں!",
+      "highPriority": "زیادہ ترجیح",
+      "mediumPriority": "درمیانہ ترجیح",
+      "lowPriority": "کم ترجیح",
+      "due": "واجب الادا:",
+      "created": "تخلیق:",
+      "complete": "مکمل",
+      "undo": "واپس",
+      "delete": "حذف کریں"
+    }
+  },
+  "signin": {
+    "title": "اپنے اکاؤنٹ میں سائن ان کریں",
+    "emailPlaceholder": "ای میل ایڈریس",
+    "passwordPlaceholder": "پاس ورڈ",
+    "button": "سائن ان کریں",
+    "loading": "سائن ان ہو رہا ہے...",
+    "noAccount": "اکاؤنٹ نہیں ہے؟",
+    "signupLink": "سائن اپ کریں"
+  },
+  "signup": {
+    "title": "نیا اکاؤنٹ بنائیں",
+    "namePlaceholder": "مکمل نام",
+    "emailPlaceholder": "ای میل ایڈریس",
+    "passwordPlaceholder": "پاس ورڈ",
+    "button": "سائن اپ کریں",
+    "loading": "اکاؤنٹ بن رہا ہے...",
+    "haveAccount": "پہلے سے اکاؤنٹ موجود ہے؟",
+    "signinLink": "سائن ان کریں",
+    "successMessage": "سائن اپ کامیاب! سائن ان پر ریڈائریکٹ ہو رہا ہے...",
+    "emailExists": "ای میل پہلے سے رجسٹرڈ ہے۔ براہ کرم کوئی اور ای میل استعمال کریں یا سائن ان کرنے کی کوشش کریں۔",
+    "failure": "سائن اپ ناکام۔ براہ کرم دوبارہ کوشش کریں۔",
+    "networkError": "نیٹ ورک خرابی پیش آگئی"
+  }
+}

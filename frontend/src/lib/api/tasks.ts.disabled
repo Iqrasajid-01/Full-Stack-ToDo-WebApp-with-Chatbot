@@ -1,0 +1,39 @@
+import { Task, ApiResponse } from '@/types';
+import { apiClient } from './client';
+
+export const taskService = {
+  /**
+   * Fetch all tasks for the authenticated user
+   */
+  async getAllTasks(params?: { status?: string; priority?: string; page?: number; limit?: number }): Promise<ApiResponse<{ tasks: Task[] }>> {
+    return await apiClient.getTasks(params);
+  },
+
+  /**
+   * Create a new task
+   */
+  async createTask(taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Task>> {
+    return await apiClient.createTask(taskData);
+  },
+
+  /**
+   * Update an existing task
+   */
+  async updateTask(id: string, taskData: Partial<Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<ApiResponse<Task>> {
+    return await apiClient.updateTask(id, taskData);
+  },
+
+  /**
+   * Delete a task
+   */
+  async deleteTask(id: string): Promise<ApiResponse<{ message: string }>> {
+    return await apiClient.deleteTask(id);
+  },
+
+  /**
+   * Toggle task completion status
+   */
+  async toggleTaskCompletion(id: string, isCompleted: boolean): Promise<ApiResponse<Pick<Task, 'id' | 'isCompleted' | 'updatedAt' | 'completedAt'>>> {
+    return await apiClient.toggleTaskCompletion(id, isCompleted);
+  }
+};
